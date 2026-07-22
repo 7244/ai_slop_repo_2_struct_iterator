@@ -1,4 +1,9 @@
-#pragma once
+#ifndef STRUCTREG_NAME
+  #error ?
+#endif
+
+#define _STRUCTREG_CONCAT_(p0, p1) p0##p1
+#define _STRUCTREG_CONCAT(p0, p1) _STRUCTREG_CONCAT_(p0, p1)
 
 #include <type_traits>
 
@@ -9,7 +14,7 @@
 #endif
 
 // friend-injection machinery
-namespace _struct_registry{
+namespace _STRUCTREG_CONCAT(_structreg_,STRUCTREG_NAME){
   template <auto>
   struct nth {
     friend consteval auto get_type(nth);
@@ -25,32 +30,29 @@ namespace _struct_registry{
 // registration: assign next sequential index to a type
 template <class T, std::size_t N = 0, auto Unique = []{}>
 consteval std::size_t reg_type() {
-  if constexpr (requires { get_type(_struct_registry::nth<N>{}); }) {
+  if constexpr (requires { get_type(_STRUCTREG_CONCAT(_structreg_,STRUCTREG_NAME)::nth<N>{}); }) {
     if constexpr (std::is_same_v<
-      decltype(get_type(_struct_registry::nth<N>{})), T
+      decltype(get_type(_STRUCTREG_CONCAT(_structreg_,STRUCTREG_NAME)::nth<N>{})), T
     >) {
       return N;
     } else {
       return reg_type<T, N + 1, Unique>();
     }
   } else {
-    (void)_struct_registry::type_slot<N, T>{};
+    (void)_STRUCTREG_CONCAT(_structreg_,STRUCTREG_NAME)::type_slot<N, T>{};
     return N;
   }
 }
 
 template <auto Unique = []{}, std::size_t N = 0>
 consteval std::size_t type_count() {
-  if constexpr (requires { get_type(_struct_registry::nth<N>{}); }) {
+  if constexpr (requires { get_type(_STRUCTREG_CONCAT(_structreg_,STRUCTREG_NAME)::nth<N>{}); }) {
     return type_count<Unique, N + 1>();
-  } else {
+  }
+  else{
     return N;
   }
 }
-
-// access type by compile-time index
-template <std::size_t I>
-using type_at = decltype(get_type(_struct_registry::nth<I>{}));
 
 #define STRUCT(name, ...) \
   struct { __VA_ARGS__; } name; \
@@ -64,3 +66,8 @@ using type_at = decltype(get_type(_struct_registry::nth<I>{}));
 #if defined(__GNUC__) && !defined(__clang__)
   #pragma GCC diagnostic pop
 #endif
+
+#undef _STRUCTREG_CONCAT
+#undef _STRUCTREG_CONCAT_
+
+#undef STRUCTREG_NAME

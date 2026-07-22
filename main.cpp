@@ -1,4 +1,6 @@
+#define STRUCTREG_NAME salsa
 #include "struct_registry.h"
+
 #include <cstdio>
 #include <cassert>
 
@@ -13,9 +15,9 @@ int main() {
   // === 1. type count and type access ===
   static_assert(type_count<>() == 3);
 
-  using T0 = type_at<0>; // pile.st0
-  using T1 = type_at<1>; // pile.st1
-  using T2 = type_at<2>; // pile.st2
+  using T0 = std::remove_reference_t<decltype(pile.get<0>())>; // pile.st0
+  using T1 = std::remove_reference_t<decltype(pile.get<1>())>; // pile.st1
+  using T2 = std::remove_reference_t<decltype(pile.get<2>())>; // pile.st2
 
   static_assert(std::is_same_v<T0, decltype(pile.st0)>);
   static_assert(std::is_same_v<T1, decltype(pile.st1)>);
