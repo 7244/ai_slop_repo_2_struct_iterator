@@ -20,6 +20,9 @@ namespace _structreg_ {
     }
   };
 
+  template <typename T, auto>
+  struct var_entry {};
+
   template <class Tag, class T, std::size_t N = 0, auto Unique = []{}>
   consteval std::size_t reg_type() {
     if constexpr (requires { get_type(nth<Tag, N>{}); }) {
@@ -52,22 +55,24 @@ consteval std::size_t type_count() {
   }
 }
 
-#define STRUCTREG(name, ...) \
+#define STRUCTREG(name, ...) STRUCTREG_IMPL(name, __COUNTER__, __VA_ARGS__)
+#define STRUCTREG_IMPL(name, uid, ...) \
   name; \
-  static_assert((_structreg_::reg_type<structreg, decltype(name)>(), true)); \
-  __VA_OPT__(static_assert((_structreg_::register_all<decltype(name), __VA_ARGS__>(), true));) \
+  static_assert((_structreg_::reg_type<structreg, _structreg_::var_entry<decltype(name), uid>>(), true)); \
+  __VA_OPT__(static_assert((_structreg_::register_all<_structreg_::var_entry<decltype(name), uid>, __VA_ARGS__>(), true));) \
   template <typename Tag, std::size_t I> \
-  requires (I == _structreg_::reg_type<Tag, decltype(name)>()) \
+  requires (I == _structreg_::reg_type<Tag, _structreg_::var_entry<decltype(name), uid>>()) \
   constexpr decltype(auto) get(this auto&& self){ \
     return (self.name); \
   }
 
-#define STRUCTREG_VAR(name, ...) \
+#define STRUCTREG_VAR(name, ...) STRUCTREG_VAR_IMPL(name, __COUNTER__, __VA_ARGS__)
+#define STRUCTREG_VAR_IMPL(name, uid, ...) \
   name; \
-  static_assert((_structreg_::reg_type<structreg, decltype(name)>(), true)); \
-  __VA_OPT__(static_assert((_structreg_::register_all<decltype(name), __VA_ARGS__>(), true));) \
+  static_assert((_structreg_::reg_type<structreg, _structreg_::var_entry<decltype(name), uid>>(), true)); \
+  __VA_OPT__(static_assert((_structreg_::register_all<_structreg_::var_entry<decltype(name), uid>, __VA_ARGS__>(), true));) \
   template <typename Tag, std::size_t I> \
-  requires (I == _structreg_::reg_type<Tag, decltype(name)>()) \
+  requires (I == _structreg_::reg_type<Tag, _structreg_::var_entry<decltype(name), uid>>()) \
   constexpr decltype(auto) get() { \
     return (name); \
   }

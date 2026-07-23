@@ -68,6 +68,26 @@ static_assert(std::is_same_v<decltype(get<mv_tag_a, 2>()), double&>);
 static_assert(std::is_same_v<decltype(get<mv_tag_b, 0>()), char&>);
 static_assert(std::is_same_v<decltype(get<mv_tag_b, 1>()), double&>);
 
+// --- same-type tests (standalone) ---
+int STRUCTREG_VAR(same_a);
+int STRUCTREG_VAR(same_b);
+
+static_assert(type_count<structreg>() == 9);
+static_assert(std::is_same_v<decltype(get<structreg, 7>()), int&>);
+static_assert(std::is_same_v<decltype(get<structreg, 8>()), int&>);
+
+// --- same-type tests (struct) ---
+struct {
+  using structreg = decltype([]{});
+  int STRUCTREG(st_a);
+  int STRUCTREG(st_b);
+} st_obj;
+using st_tag = decltype(st_obj)::structreg;
+
+static_assert(type_count<st_tag>() == 2);
+static_assert(std::is_same_v<std::remove_reference_t<decltype(st_obj.get<st_tag, 0>())>, int>);
+static_assert(std::is_same_v<std::remove_reference_t<decltype(st_obj.get<st_tag, 1>())>, int>);
+
 int main() {
   using tag_t = decltype(pile)::structreg;
 
@@ -191,6 +211,18 @@ int main() {
 
   get<mv_tag_b, 1>() = 1.618;
   assert(mv_w == 1.618);
+
+  // --- same-type runtime tests (standalone) ---
+  get<structreg, 7>() = 100;
+  get<structreg, 8>() = 200;
+  assert(same_a == 100);
+  assert(same_b == 200);
+
+  // --- same-type runtime tests (struct) ---
+  st_obj.get<st_tag, 0>() = 10;
+  st_obj.get<st_tag, 1>() = 20;
+  assert(st_obj.st_a == 10);
+  assert(st_obj.st_b == 20);
 
   return 0;
 }
