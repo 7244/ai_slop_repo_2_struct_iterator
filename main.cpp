@@ -4,9 +4,9 @@
 
 struct {
   using structreg = decltype([]{});
-  STRUCT(st0, int x; float y);
-  STRUCT(st1, char tag);
-  STRUCT(st2, double d);
+  struct{int x; float y;} STRUCTREG(st0);
+  struct{char tag;} STRUCTREG(st1);
+  struct{double d;} STRUCTREG(st2);
 } pile;
 
 int main() {

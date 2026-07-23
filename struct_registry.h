@@ -47,8 +47,8 @@ consteval std::size_t type_count() {
   }
 }
 
-#define STRUCT(name, ...) \
-  struct { __VA_ARGS__; } name; \
+#define STRUCTREG(name) \
+  name; \
   static_assert((_structreg_::reg_type<structreg, decltype(name)>(), true)); \
   template <std::size_t I> \
   requires (I == _structreg_::reg_type<structreg, decltype(name)>()) \
