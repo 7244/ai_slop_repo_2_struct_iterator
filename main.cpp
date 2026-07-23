@@ -19,6 +19,55 @@ struct {
   double STRUCTREG(w, tag_a, tag_b);
 } multi;
 
+// --- standalone variable tests ---
+using structreg = decltype([]{});
+struct{int x; float y;} STRUCTREG_VAR(sv0);
+struct{char tag;} STRUCTREG_VAR(sv1);
+struct{double d;} STRUCTREG_VAR(sv2);
+
+static_assert(type_count<structreg>() == 3);
+
+using SV0 = std::remove_reference_t<decltype(get<structreg, 0>())>;
+using SV1 = std::remove_reference_t<decltype(get<structreg, 1>())>;
+using SV2 = std::remove_reference_t<decltype(get<structreg, 2>())>;
+
+static_assert(std::is_same_v<SV0, decltype(sv0)>);
+static_assert(std::is_same_v<SV1, decltype(sv1)>);
+static_assert(std::is_same_v<SV2, decltype(sv2)>);
+
+static_assert(std::is_same_v<decltype(get<structreg, 0>()), SV0&>);
+static_assert(std::is_same_v<decltype(get<structreg, 1>()), SV1&>);
+static_assert(std::is_same_v<decltype(get<structreg, 2>()), SV2&>);
+
+static_assert(std::is_same_v<decltype(get<structreg, 0>().x), int>);
+static_assert(std::is_same_v<decltype(get<structreg, 0>().y), float>);
+static_assert(std::is_same_v<decltype(get<structreg, 1>().tag), char>);
+static_assert(std::is_same_v<decltype(get<structreg, 2>().d), double>);
+
+// --- standalone variable tests (multi-tag) ---
+using mv_tag_a = decltype([]{});
+using mv_tag_b = decltype([]{});
+int   STRUCTREG_VAR(mv_x, mv_tag_a);
+float STRUCTREG_VAR(mv_y, mv_tag_a);
+char  STRUCTREG_VAR(mv_z, mv_tag_b);
+double STRUCTREG_VAR(mv_w, mv_tag_a, mv_tag_b);
+
+static_assert(type_count<structreg>() == 7);
+static_assert(type_count<mv_tag_a>() == 3);
+static_assert(type_count<mv_tag_b>() == 2);
+
+static_assert(std::is_same_v<std::remove_reference_t<decltype(get<mv_tag_a, 0>())>, int>);
+static_assert(std::is_same_v<std::remove_reference_t<decltype(get<mv_tag_a, 1>())>, float>);
+static_assert(std::is_same_v<std::remove_reference_t<decltype(get<mv_tag_a, 2>())>, double>);
+static_assert(std::is_same_v<std::remove_reference_t<decltype(get<mv_tag_b, 0>())>, char>);
+static_assert(std::is_same_v<std::remove_reference_t<decltype(get<mv_tag_b, 1>())>, double>);
+
+static_assert(std::is_same_v<decltype(get<mv_tag_a, 0>()), int&>);
+static_assert(std::is_same_v<decltype(get<mv_tag_a, 1>()), float&>);
+static_assert(std::is_same_v<decltype(get<mv_tag_a, 2>()), double&>);
+static_assert(std::is_same_v<decltype(get<mv_tag_b, 0>()), char&>);
+static_assert(std::is_same_v<decltype(get<mv_tag_b, 1>()), double&>);
+
 int main() {
   using tag_t = decltype(pile)::structreg;
 
@@ -105,6 +154,43 @@ int main() {
 
   std::printf("multi.x=%d, multi.y=%.2f, multi.w=%.3f, multi.z=%c\n",
     multi.x, double(multi.y), multi.w, multi.z);
+
+  // --- standalone variable runtime tests (single-tag) ---
+  get<structreg, 0>().x = 10;
+  get<structreg, 0>().y = 3.14f;
+  get<structreg, 1>().tag = 'A';
+  get<structreg, 2>().d = 2.718;
+
+  assert(sv0.x == 10);
+  assert(sv0.y == 3.14f);
+  assert(sv1.tag == 'A');
+  assert(sv2.d == 2.718);
+
+  sv0.x = 99;
+  assert((get<structreg, 0>().x == 99));
+
+  SV0& svref0 = get<structreg, 0>();
+  SV1& svref1 = get<structreg, 1>();
+  svref0.x = 7;
+  svref0.y = 1.5f;
+  svref1.tag = 'Z';
+  assert(sv0.x == 7);
+  assert(sv1.tag == 'Z');
+
+  // --- standalone variable runtime tests (multi-tag) ---
+  get<mv_tag_a, 0>() = 42;
+  get<mv_tag_a, 1>() = 3.14f;
+  get<mv_tag_b, 0>() = 'Q';
+
+  assert(mv_x == 42);
+  assert(mv_y == 3.14f);
+  assert(mv_z == 'Q');
+
+  get<mv_tag_a, 2>() = 2.718;
+  assert(mv_w == 2.718);
+
+  get<mv_tag_b, 1>() = 1.618;
+  assert(mv_w == 1.618);
 
   return 0;
 }

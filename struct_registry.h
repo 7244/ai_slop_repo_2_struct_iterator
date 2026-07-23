@@ -62,6 +62,16 @@ consteval std::size_t type_count() {
     return (self.name); \
   }
 
+#define STRUCTREG_VAR(name, ...) \
+  name; \
+  static_assert((_structreg_::reg_type<structreg, decltype(name)>(), true)); \
+  __VA_OPT__(static_assert((_structreg_::register_all<decltype(name), __VA_ARGS__>(), true));) \
+  template <typename Tag, std::size_t I> \
+  requires (I == _structreg_::reg_type<Tag, decltype(name)>()) \
+  constexpr decltype(auto) get() { \
+    return (name); \
+  }
+
 #if defined(__GNUC__) && !defined(__clang__)
   #pragma GCC diagnostic pop
 #endif
