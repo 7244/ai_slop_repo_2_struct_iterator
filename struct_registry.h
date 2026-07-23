@@ -35,6 +35,11 @@ namespace _structreg_ {
       return N;
     }
   }
+
+  template <typename T, typename... Tags>
+  consteval void register_all() {
+    ((void)reg_type<Tags, T>(), ...);
+  }
 }
 
 template <class Tag, auto Unique = []{}, std::size_t N = 0>
@@ -47,11 +52,12 @@ consteval std::size_t type_count() {
   }
 }
 
-#define STRUCTREG(name) \
+#define STRUCTREG(name, ...) \
   name; \
   static_assert((_structreg_::reg_type<structreg, decltype(name)>(), true)); \
-  template <std::size_t I> \
-  requires (I == _structreg_::reg_type<structreg, decltype(name)>()) \
+  __VA_OPT__(static_assert((_structreg_::register_all<decltype(name), __VA_ARGS__>(), true));) \
+  template <typename Tag, std::size_t I> \
+  requires (I == _structreg_::reg_type<Tag, decltype(name)>()) \
   constexpr decltype(auto) get(this auto&& self){ \
     return (self.name); \
   }
