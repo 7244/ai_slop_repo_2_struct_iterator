@@ -3,16 +3,16 @@
 #include <cassert>
 
 struct {
-  using structreg = decltype([]{});
+  STRUCTREG_TAG(structreg);
   struct{int x; float y;} STRUCTREG(st0);
   struct{char tag;} STRUCTREG(st1);
   struct{double d;} STRUCTREG(st2);
 } pile;
 
-using tag_a = decltype([]{});
-using tag_b = decltype([]{});
+STRUCTREG_TAG(tag_a);
+STRUCTREG_TAG(tag_b);
 struct {
-  using structreg = decltype([]{});
+  STRUCTREG_TAG(structreg);
   int STRUCTREG(x, tag_a);
   float STRUCTREG(y, tag_a);
   char STRUCTREG(z, tag_b);
@@ -20,12 +20,12 @@ struct {
 } multi;
 
 // --- standalone variable tests ---
-using structreg = decltype([]{});
+STRUCTREG_TAG(structreg);
 struct{int x; float y;} STRUCTREG_VAR(sv0);
 struct{char tag;} STRUCTREG_VAR(sv1);
 struct{double d;} STRUCTREG_VAR(sv2);
 
-static_assert(type_count<structreg>() == 3);
+static_assert(structreg::count() == 3);
 
 using SV0 = std::remove_reference_t<decltype(get<structreg, 0>())>;
 using SV1 = std::remove_reference_t<decltype(get<structreg, 1>())>;
@@ -45,16 +45,16 @@ static_assert(std::is_same_v<decltype(get<structreg, 1>().tag), char>);
 static_assert(std::is_same_v<decltype(get<structreg, 2>().d), double>);
 
 // --- standalone variable tests (multi-tag) ---
-using mv_tag_a = decltype([]{});
-using mv_tag_b = decltype([]{});
+STRUCTREG_TAG(mv_tag_a);
+STRUCTREG_TAG(mv_tag_b);
 int   STRUCTREG_VAR(mv_x, mv_tag_a);
 float STRUCTREG_VAR(mv_y, mv_tag_a);
 char  STRUCTREG_VAR(mv_z, mv_tag_b);
 double STRUCTREG_VAR(mv_w, mv_tag_a, mv_tag_b);
 
-static_assert(type_count<structreg>() == 7);
-static_assert(type_count<mv_tag_a>() == 3);
-static_assert(type_count<mv_tag_b>() == 2);
+static_assert(structreg::count() == 7);
+static_assert(mv_tag_a::count() == 3);
+static_assert(mv_tag_b::count() == 2);
 
 static_assert(std::is_same_v<std::remove_reference_t<decltype(get<mv_tag_a, 0>())>, int>);
 static_assert(std::is_same_v<std::remove_reference_t<decltype(get<mv_tag_a, 1>())>, float>);
@@ -72,26 +72,26 @@ static_assert(std::is_same_v<decltype(get<mv_tag_b, 1>()), double&>);
 int STRUCTREG_VAR(same_a);
 int STRUCTREG_VAR(same_b);
 
-static_assert(type_count<structreg>() == 9);
+static_assert(structreg::count() == 9);
 static_assert(std::is_same_v<decltype(get<structreg, 7>()), int&>);
 static_assert(std::is_same_v<decltype(get<structreg, 8>()), int&>);
 
 // --- same-type tests (struct) ---
 struct {
-  using structreg = decltype([]{});
+  STRUCTREG_TAG(structreg);
   int STRUCTREG(st_a);
   int STRUCTREG(st_b);
 } st_obj;
 using st_tag = decltype(st_obj)::structreg;
 
-static_assert(type_count<st_tag>() == 2);
+static_assert(st_tag::count() == 2);
 static_assert(std::is_same_v<std::remove_reference_t<decltype(st_obj.get<st_tag, 0>())>, int>);
 static_assert(std::is_same_v<std::remove_reference_t<decltype(st_obj.get<st_tag, 1>())>, int>);
 
 int main() {
   using tag_t = decltype(pile)::structreg;
 
-  static_assert(type_count<tag_t>() == 3);
+  static_assert(tag_t::count() == 3);
 
   using T0 = std::remove_reference_t<decltype(pile.get<tag_t, 0>())>;
   using T1 = std::remove_reference_t<decltype(pile.get<tag_t, 1>())>;
@@ -138,8 +138,8 @@ int main() {
   std::printf("pile.st1: tag=%c\n", pile.st1.tag);
   std::printf("pile.st2: d=%.3f\n", pile.st2.d);
 
-  static_assert(type_count<tag_a>() == 3);
-  static_assert(type_count<tag_b>() == 2);
+  static_assert(tag_a::count() == 3);
+  static_assert(tag_b::count() == 2);
 
   static_assert(std::is_same_v<
     std::remove_reference_t<decltype(multi.get<tag_a, 0>())>, int>);

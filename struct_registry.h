@@ -43,17 +43,28 @@ namespace _structreg_ {
   consteval void register_all() {
     ((void)reg_type<Tags, T>(), ...);
   }
+
+  template <class Tag, auto Unique = []{}, std::size_t N = 0>
+  consteval std::size_t type_count() {
+    if constexpr (requires { get_type(nth<Tag, N>{}); }) {
+      return type_count<Tag, Unique, N + 1>();
+    }
+    else{
+      return N;
+    }
+  }
+
+  template <auto>
+  struct tag {
+    template <auto Unique = []{}>
+    static constexpr std::size_t count() {
+      return type_count<tag, Unique>();
+    }
+  };
 }
 
-template <class Tag, auto Unique = []{}, std::size_t N = 0>
-consteval std::size_t type_count() {
-  if constexpr (requires { get_type(_structreg_::nth<Tag, N>{}); }) {
-    return type_count<Tag, Unique, N + 1>();
-  }
-  else{
-    return N;
-  }
-}
+#define STRUCTREG_TAG(name) \
+  using name = _structreg_::tag<[]{}>
 
 #define STRUCTREG(name, ...) STRUCTREG_IMPL(name, __COUNTER__, __VA_ARGS__)
 #define STRUCTREG_IMPL(name, uid, ...) \
