@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include <utility>
 
 #if defined(__GNUC__) && !defined(__clang__)
   #pragma GCC diagnostic push
@@ -19,9 +20,6 @@ namespace _structreg_ {
       return T{};
     }
   };
-
-  template <typename T, auto>
-  struct var_entry {};
 
   template <class Tag, class T, std::size_t N = 0, auto Unique = []{}>
   consteval std::size_t reg_type() {
@@ -61,18 +59,44 @@ namespace _structreg_ {
       return type_count<tag, Unique>();
     }
   };
+
+  using default_tag = tag<[]{ }>;
+
+  template <typename StructT, std::size_t I>
+  consteval bool _uid_exists() {
+    if constexpr (requires { StructT{}.template get<void, I>(); }) {
+      return true;
+    }
+    return false;
+  }
+
+  template <typename StructT, std::size_t Start, std::size_t End>
+  consteval std::size_t _count_range() {
+    if constexpr (End - Start <= 512) {
+      return []<std::size_t... Is>(std::index_sequence<Is...>) {
+        return (_uid_exists<StructT, Start + Is>() + ...);
+      }(std::make_index_sequence<End - Start>{});
+    } else {
+      constexpr std::size_t Mid = (Start + End) / 2;
+      return _count_range<StructT, Start, Mid>() + _count_range<StructT, Mid, End>();
+    }
+  }
+
+  template <typename StructT>
+  consteval std::size_t count_all() {
+    return _count_range<StructT, 0, 4096>();
+  }
 }
 
 #define STRUCTREG_TAG(name) \
-  using name = _structreg_::tag<[]{}>
+  using name = _structreg_::tag<[]{ }>
 
 #define STRUCTREG(name, ...) STRUCTREG_IMPL(name, __COUNTER__, __VA_ARGS__)
 #define STRUCTREG_IMPL(name, uid, ...) \
   name; \
-  static_assert((_structreg_::reg_type<structreg, _structreg_::var_entry<decltype(name), uid>>(), true)); \
-  __VA_OPT__(static_assert((_structreg_::register_all<_structreg_::var_entry<decltype(name), uid>, __VA_ARGS__>(), true));) \
+  __VA_OPT__(static_assert((_structreg_::register_all<std::integral_constant<std::size_t, uid>, __VA_ARGS__>(), true));) \
   template <typename Tag, std::size_t I> \
-  requires (I == _structreg_::reg_type<Tag, _structreg_::var_entry<decltype(name), uid>>()) \
+  requires (I == uid) \
   constexpr decltype(auto) get(this auto&& self){ \
     return (self.name); \
   }
@@ -80,13 +104,18 @@ namespace _structreg_ {
 #define STRUCTREG_VAR(name, ...) STRUCTREG_VAR_IMPL(name, __COUNTER__, __VA_ARGS__)
 #define STRUCTREG_VAR_IMPL(name, uid, ...) \
   name; \
-  static_assert((_structreg_::reg_type<structreg, _structreg_::var_entry<decltype(name), uid>>(), true)); \
-  __VA_OPT__(static_assert((_structreg_::register_all<_structreg_::var_entry<decltype(name), uid>, __VA_ARGS__>(), true));) \
+  static_assert((_structreg_::reg_type<_structreg_::default_tag, std::integral_constant<std::size_t, uid>>(), true)); \
+  __VA_OPT__(static_assert((_structreg_::register_all<std::integral_constant<std::size_t, uid>, __VA_ARGS__>(), true));) \
   template <typename Tag, std::size_t I> \
-  requires (I == _structreg_::reg_type<Tag, _structreg_::var_entry<decltype(name), uid>>()) \
+  requires (I == _structreg_::reg_type<Tag, std::integral_constant<std::size_t, uid>>()) \
   constexpr decltype(auto) get() { \
     return (name); \
   }
+
+#define STRUCTREG_COUNT(obj) \
+  _structreg_::count_all<decltype(obj)>()
+
+#define STRUCTREG_AUTO_TAG(obj) void
 
 #if defined(__GNUC__) && !defined(__clang__)
   #pragma GCC diagnostic pop
