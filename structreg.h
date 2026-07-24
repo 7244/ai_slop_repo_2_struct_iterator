@@ -1,8 +1,5 @@
 #pragma once
 
-#include <type_traits>
-#include <utility>
-
 #if defined(__GNUC__) && !defined(__clang__)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wnon-template-friend"
@@ -21,8 +18,8 @@ namespace _structreg_ {
     }
   };
 
-  template <class Tag, class T, std::size_t N = 0, auto Unique = []{}>
-  consteval std::size_t reg_type() {
+  template <class Tag, class T, uintptr_t N = 0, auto Unique = []{}>
+  consteval uintptr_t reg_type() {
     if constexpr (requires { get_type(nth<Tag, N>{}); }) {
       if constexpr (std::is_same_v<
         decltype(get_type(nth<Tag, N>{})), T
@@ -42,8 +39,8 @@ namespace _structreg_ {
     ((void)reg_type<Tags, T>(), ...);
   }
 
-  template <class Tag, auto Unique = []{}, std::size_t N = 0>
-  consteval std::size_t type_count() {
+  template <class Tag, auto Unique = []{}, uintptr_t N = 0>
+  consteval uintptr_t type_count() {
     if constexpr (requires { get_type(nth<Tag, N>{}); }) {
       return type_count<Tag, Unique, N + 1>();
     }
@@ -55,14 +52,14 @@ namespace _structreg_ {
   template <auto>
   struct tag {
     template <auto Unique = []{}>
-    static constexpr std::size_t count() {
+    static constexpr uintptr_t count() {
       return type_count<tag, Unique>();
     }
   };
 
   using default_tag = tag<[]{ }>;
 
-  template <typename StructT, std::size_t I>
+  template <typename StructT, uintptr_t I>
   consteval bool _uid_exists() {
       if constexpr (requires { StructT{}.template structreg_get<I>(); }) {
       return true;
@@ -70,20 +67,20 @@ namespace _structreg_ {
     return false;
   }
 
-  template <typename StructT, std::size_t Start, std::size_t End>
-  consteval std::size_t _count_range() {
+  template <typename StructT, uintptr_t Start, uintptr_t End>
+  consteval uintptr_t _count_range() {
     if constexpr (End - Start <= 512) {
-      return []<std::size_t... Is>(std::index_sequence<Is...>) {
+      return []<uintptr_t... Is>(std::index_sequence<Is...>) {
         return (_uid_exists<StructT, Start + Is>() + ...);
       }(std::make_index_sequence<End - Start>{});
     } else {
-      constexpr std::size_t Mid = (Start + End) / 2;
+      constexpr uintptr_t Mid = (Start + End) / 2;
       return _count_range<StructT, Start, Mid>() + _count_range<StructT, Mid, End>();
     }
   }
 
   template <typename StructT>
-  consteval std::size_t count_all() {
+  consteval uintptr_t count_all() {
     return _count_range<StructT, 0, 4096>();
   }
 }
@@ -94,8 +91,8 @@ namespace _structreg_ {
 #define STRUCTREG(name, ...) STRUCTREG_IMPL(name, __COUNTER__, __VA_ARGS__)
 #define STRUCTREG_IMPL(name, uid, ...) \
   name; \
-  __VA_OPT__(static_assert((_structreg_::register_all<std::integral_constant<std::size_t, uid>, __VA_ARGS__>(), true));) \
-  template <std::size_t I, typename Tag = _structreg_::default_tag> \
+  __VA_OPT__(static_assert((_structreg_::register_all<std::integral_constant<uintptr_t, uid>, __VA_ARGS__>(), true));) \
+  template <uintptr_t I, typename Tag = _structreg_::default_tag> \
   requires (I == uid) \
   constexpr decltype(auto) structreg_get(this auto&& self){ \
     return (self.name); \
@@ -104,10 +101,10 @@ namespace _structreg_ {
 #define STRUCTREG_VAR(name, ...) STRUCTREG_VAR_IMPL(name, __COUNTER__, __VA_ARGS__)
 #define STRUCTREG_VAR_IMPL(name, uid, ...) \
   name; \
-  static_assert((_structreg_::reg_type<_structreg_::default_tag, std::integral_constant<std::size_t, uid>>(), true)); \
-  __VA_OPT__(static_assert((_structreg_::register_all<std::integral_constant<std::size_t, uid>, __VA_ARGS__>(), true));) \
-  template <std::size_t I, typename Tag = _structreg_::default_tag> \
-  requires (I == _structreg_::reg_type<Tag, std::integral_constant<std::size_t, uid>>()) \
+  static_assert((_structreg_::reg_type<_structreg_::default_tag, std::integral_constant<uintptr_t, uid>>(), true)); \
+  __VA_OPT__(static_assert((_structreg_::register_all<std::integral_constant<uintptr_t, uid>, __VA_ARGS__>(), true));) \
+  template <uintptr_t I, typename Tag = _structreg_::default_tag> \
+  requires (I == _structreg_::reg_type<Tag, std::integral_constant<uintptr_t, uid>>()) \
   constexpr decltype(auto) structreg_get() { \
     return (name); \
   }

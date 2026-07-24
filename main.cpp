@@ -1,3 +1,6 @@
+#include <cstdint>
+#include <type_traits>
+#include <utility>
 #include "structreg.h"
 #include <cstdio>
 #include <cassert>
