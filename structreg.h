@@ -64,7 +64,7 @@ namespace _structreg_ {
 
   template <typename StructT, std::size_t I>
   consteval bool _uid_exists() {
-    if constexpr (requires { StructT{}.template get<I, void>(); }) {
+    if constexpr (requires { StructT{}.template get<I>(); }) {
       return true;
     }
     return false;
