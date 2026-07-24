@@ -1,4 +1,4 @@
-#include "struct_registry.h"
+#include "structreg.h"
 #include <cstdio>
 #include <cassert>
 
