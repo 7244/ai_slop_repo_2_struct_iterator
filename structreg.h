@@ -64,7 +64,7 @@ namespace _structreg_ {
 
   template <typename StructT, std::size_t I>
   consteval bool _uid_exists() {
-    if constexpr (requires { StructT{}.template get<I>(); }) {
+      if constexpr (requires { StructT{}.template structreg_get<I>(); }) {
       return true;
     }
     return false;
@@ -97,7 +97,7 @@ namespace _structreg_ {
   __VA_OPT__(static_assert((_structreg_::register_all<std::integral_constant<std::size_t, uid>, __VA_ARGS__>(), true));) \
   template <std::size_t I, typename Tag = _structreg_::default_tag> \
   requires (I == uid) \
-  constexpr decltype(auto) get(this auto&& self){ \
+  constexpr decltype(auto) structreg_get(this auto&& self){ \
     return (self.name); \
   }
 
@@ -108,7 +108,7 @@ namespace _structreg_ {
   __VA_OPT__(static_assert((_structreg_::register_all<std::integral_constant<std::size_t, uid>, __VA_ARGS__>(), true));) \
   template <std::size_t I, typename Tag = _structreg_::default_tag> \
   requires (I == _structreg_::reg_type<Tag, std::integral_constant<std::size_t, uid>>()) \
-  constexpr decltype(auto) get() { \
+  constexpr decltype(auto) structreg_get() { \
     return (name); \
   }
 
