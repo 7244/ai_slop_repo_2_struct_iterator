@@ -88,19 +88,17 @@ namespace _structreg_ {
 #define STRUCTREG_TAG(name) \
   using name = _structreg_::tag<[]{ }>
 
-#define STRUCTREG(name, ...) STRUCTREG_IMPL(name, __COUNTER__, __VA_ARGS__)
-#define STRUCTREG_IMPL(name, uid, ...) \
-  name; \
+#define _STRUCTREG_IMPL(name, uid, ...) \
   __VA_OPT__(static_assert((_structreg_::register_all<std::integral_constant<uintptr_t, uid>, __VA_ARGS__>(), true));) \
   template <uintptr_t I, typename Tag = _structreg_::default_tag> \
   requires (I == uid) \
   constexpr decltype(auto) structreg_get(this auto&& self){ \
     return (self.name); \
   }
+#define STRUCTREG(name, ...) name; _STRUCTREG_IMPL(name, __COUNTER__, __VA_ARGS__)
+#define STRUCTREG_EXIST(name, ...) _STRUCTREG_IMPL(name, __COUNTER__, __VA_ARGS__)
 
-#define STRUCTREG_VAR(name, ...) STRUCTREG_VAR_IMPL(name, __COUNTER__, __VA_ARGS__)
-#define STRUCTREG_VAR_IMPL(name, uid, ...) \
-  name; \
+#define _STRUCTREG_VAR_IMPL(name, uid, ...) \
   static_assert((_structreg_::reg_type<_structreg_::default_tag, std::integral_constant<uintptr_t, uid>>(), true)); \
   __VA_OPT__(static_assert((_structreg_::register_all<std::integral_constant<uintptr_t, uid>, __VA_ARGS__>(), true));) \
   template <uintptr_t I, typename Tag = _structreg_::default_tag> \
@@ -108,6 +106,8 @@ namespace _structreg_ {
   constexpr decltype(auto) structreg_get() { \
     return (name); \
   }
+#define STRUCTREG_VAR(name, ...) name; _STRUCTREG_VAR_IMPL(name, __COUNTER__, __VA_ARGS__)
+#define STRUCTREG_VAR_EXIST(name, ...) _STRUCTREG_VAR_IMPL(name, __COUNTER__, __VA_ARGS__)
 
 #define STRUCTREG_COUNT(obj) \
   _structreg_::count_all<decltype(obj)>()
