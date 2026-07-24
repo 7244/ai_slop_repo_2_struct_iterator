@@ -115,8 +115,6 @@ namespace _structreg_ {
 #define STRUCTREG_COUNT(obj) \
   _structreg_::count_all<decltype(obj)>()
 
-#define STRUCTREG_AUTO_TAG(obj) void
-
 #if defined(__GNUC__) && !defined(__clang__)
   #pragma GCC diagnostic pop
 #endif

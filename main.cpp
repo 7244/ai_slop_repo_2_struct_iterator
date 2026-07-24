@@ -10,7 +10,6 @@ struct {
 } pile;
 
 constexpr auto pile_cnt = STRUCTREG_COUNT(pile);
-using pile_tag = STRUCTREG_AUTO_TAG(pile);
 
 // --- struct multi: fields with extra explicit tags ---
 STRUCTREG_TAG(tag_a);
@@ -23,7 +22,6 @@ struct {
 } multi;
 
 constexpr auto multi_cnt = STRUCTREG_COUNT(multi);
-using multi_tag = STRUCTREG_AUTO_TAG(multi);
 
 // --- standalone variable tests (single-tag) ---
 struct{int x; float y;} STRUCTREG_VAR(sv0);
@@ -88,7 +86,6 @@ struct {
 } st_obj;
 
 constexpr auto st_cnt = STRUCTREG_COUNT(st_obj);
-using st_tag = STRUCTREG_AUTO_TAG(st_obj);
 
 static_assert(st_cnt == 2);
 static_assert(std::is_same_v<std::remove_reference_t<decltype(st_obj.get<16>())>, int>);
