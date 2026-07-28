@@ -86,6 +86,18 @@ static_assert(_structreg_::default_tag::count() == 9);
 static_assert(std::is_same_v<decltype(structreg_get<7>()), int&>);
 static_assert(std::is_same_v<decltype(structreg_get<8>()), int&>);
 
+// --- structreg_get_tag_index tests (standalone) ---
+static_assert(structreg_get_tag_index<sv0>() == 0);
+static_assert(structreg_get_tag_index<sv1>() == 1);
+static_assert(structreg_get_tag_index<sv2>() == 2);
+static_assert(structreg_get_tag_index<mv_x, mv_tag_a>() == 0);
+static_assert(structreg_get_tag_index<mv_y, mv_tag_a>() == 1);
+static_assert(structreg_get_tag_index<mv_w, mv_tag_a>() == 2);
+static_assert(structreg_get_tag_index<mv_z, mv_tag_b>() == 0);
+static_assert(structreg_get_tag_index<mv_w, mv_tag_b>() == 1);
+static_assert(structreg_get_tag_index<same_a>() == 7);
+static_assert(structreg_get_tag_index<same_b>() == 8);
+
 // --- same-type tests (struct, uids 16,17) ---
 struct {
   int STRUCTREG(st_a);
@@ -97,6 +109,18 @@ constexpr auto st_cnt = STRUCTREG_COUNT(st_obj);
 static_assert(st_cnt == 2);
 static_assert(std::is_same_v<std::remove_reference_t<decltype(st_obj.structreg_get<16>())>, int>);
 static_assert(std::is_same_v<std::remove_reference_t<decltype(st_obj.structreg_get<17>())>, int>);
+
+// --- structreg_get_tag_index tests (struct) ---
+static_assert(structreg_get_tag_index<pile, pile.st0>() == 0);
+static_assert(structreg_get_tag_index<pile, pile.st1>() == 1);
+static_assert(structreg_get_tag_index<pile, pile.st2>() == 2);
+static_assert(structreg_get_tag_index<multi, multi.x, tag_a>() == 0);
+static_assert(structreg_get_tag_index<multi, multi.y, tag_a>() == 1);
+static_assert(structreg_get_tag_index<multi, multi.w, tag_a>() == 2);
+static_assert(structreg_get_tag_index<multi, multi.z, tag_b>() == 0);
+static_assert(structreg_get_tag_index<multi, multi.w, tag_b>() == 1);
+static_assert(structreg_get_tag_index<st_obj, st_obj.st_a>() == 0);
+static_assert(structreg_get_tag_index<st_obj, st_obj.st_b>() == 1);
 
 int main() {
   static_assert(pile_cnt == 3);
@@ -244,6 +268,40 @@ int main() {
   st_obj.structreg_get<17>() = 20;
   assert(st_obj.st_a == 10);
   assert(st_obj.st_b == 20);
+
+  // --- structreg_get_tag_index runtime tests (standalone) ---
+  {
+    constexpr auto i0 = structreg_get_tag_index<sv0>();
+    constexpr auto i1 = structreg_get_tag_index<sv1>();
+    constexpr auto i2 = structreg_get_tag_index<sv2>();
+    structreg_get<i0>().x = 42;
+    structreg_get<i0>().y = 1.5f;
+    structreg_get<i1>().tag = 'X';
+    structreg_get<i2>().d = 3.14;
+    assert(sv0.x == 42);
+    assert(sv0.y == 1.5f);
+    assert(sv1.tag == 'X');
+    assert(sv2.d == 3.14);
+  }
+  {
+    constexpr auto mx = structreg_get_tag_index<mv_x, mv_tag_a>();
+    constexpr auto mw = structreg_get_tag_index<mv_w, mv_tag_b>();
+    structreg_get<mx, mv_tag_a>() = 777;
+    structreg_get<mw, mv_tag_b>() = 6.28;
+    assert(mv_x == 777);
+    assert(mv_w == 6.28);
+  }
+
+  // --- structreg_get_tag_index runtime cross-checks (struct) ---
+  // Note: structreg_get on struct members uses UIDs, not tag indices,
+  // so we verify correctness via static_asserts above instead.
+  // Here we just cross-check that converted indices match.
+  {
+    constexpr auto ix = structreg_get_tag_index<multi, multi.x, tag_a>();
+    constexpr auto iw = structreg_get_tag_index<multi, multi.w, tag_b>();
+    static_assert(ix == 0);
+    static_assert(iw == 1);
+  }
 
   return 0;
 }
