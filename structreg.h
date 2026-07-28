@@ -19,7 +19,7 @@ namespace _structreg_ {
     }
   };
 
-  template <class Tag, class T, uintptr_t N = 0, auto Unique = []{}>
+  template <class Tag, class T, uintptr_t N = 0>
   consteval uintptr_t reg_type() {
     if constexpr (requires { get_type(nth<Tag, N>{}); }) {
       if constexpr (std::is_same_v<
@@ -27,7 +27,7 @@ namespace _structreg_ {
       >) {
         return N;
       } else {
-        return reg_type<Tag, T, N + 1, Unique>();
+        return reg_type<Tag, T, N + 1>();
       }
     } else {
       (void)type_slot<Tag, N, T>{};
@@ -81,6 +81,13 @@ namespace _structreg_ {
   template <auto&>
   struct var_to_uid;
 
+  template <uintptr_t I>
+  consteval bool field_addr_match(const auto& Sref, const auto& Fref) {
+    if constexpr (requires { &Sref.template structreg_get<I>() == &Fref; })
+      return &Sref.template structreg_get<I>() == &Fref;
+    return false;
+  }
+
   template <typename StructT, uintptr_t Start, uintptr_t End>
   consteval uintptr_t _count_range() {
     if constexpr (Start >= End) return 0;
@@ -96,8 +103,9 @@ namespace _structreg_ {
 #define _STRUCTREG_IMPL(name, uid, ...) \
   __VA_OPT__(static_assert(_structreg_::register_all<std::integral_constant<uintptr_t, uid>, __VA_ARGS__>());) \
   template <uintptr_t I, typename Tag = _structreg_::default_tag> \
-  requires (I == uid) \
-  constexpr decltype(auto) structreg_get(this auto&& self){ \
+  constexpr decltype(auto) structreg_get(this auto&& self) \
+    requires (I == _structreg_::reg_type<std::conditional_t<std::is_same_v<Tag, _structreg_::default_tag>, std::remove_reference_t<decltype(self)>, Tag>, std::integral_constant<uintptr_t, uid>>()) \
+  { \
     return (self.name); \
   }
 #define STRUCTREG(name, ...) name; _STRUCTREG_IMPL(name, __COUNTER__, __VA_ARGS__)
@@ -118,7 +126,7 @@ namespace _structreg_ {
 #define STRUCTREG_VAR_EXIST(name, ...) _STRUCTREG_VAR_IMPL(name, __COUNTER__, __VA_ARGS__)
 
 #define STRUCTREG_COUNT(obj) \
-  _structreg_::_count_range<decltype(obj), 0, 1024>()
+  _structreg_::_count_range<std::remove_reference_t<decltype(obj)>, 0, 1024>()
 
 template <class FromTag, uintptr_t FromIndex, class ToTag>
 inline constexpr uintptr_t structreg_convert_tag_index =
@@ -138,17 +146,14 @@ consteval uintptr_t structreg_get_tag_index() {
   using T = std::remove_reference_t<decltype(S)>;
   constexpr auto uid = []<uintptr_t... Is>(std::index_sequence<Is...>) {
     uintptr_t f = ~uintptr_t{};
-    (([]<uintptr_t I> consteval {
-      if constexpr (requires { &S.template structreg_get<I>() == &F; })
-        return &S.template structreg_get<I>() == &F;
-      return false;
-    }.template operator()<Is>() ? (f = Is) || true : false) || ...);
+    ((_structreg_::field_addr_match<Is>(S, F) ? (f = Is) || true : false) || ...);
     return f;
   }(std::make_index_sequence<1024>{});
   static_assert(uid != ~uintptr_t{}, "structreg_get_tag_index: field not found in struct");
-  constexpr auto r = _structreg_::try_lookup_type<Tag, std::integral_constant<uintptr_t, uid>>();
+  using UidType = decltype(get_type(_structreg_::nth<T, uid>{}));
+  constexpr auto r = _structreg_::try_lookup_type<Tag, UidType>();
   static_assert(r != ~uintptr_t{} || std::is_same_v<Tag, _structreg_::default_tag>, "structreg_get_tag_index: field not registered under tag");
-  return r != ~uintptr_t{} ? r : _structreg_::_count_range<T, 0, uid>();
+  return r != ~uintptr_t{} ? r : uid;
 }
 
 #if defined(__GNUC__) && !defined(__clang__)

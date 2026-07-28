@@ -107,8 +107,8 @@ struct {
 constexpr auto st_cnt = STRUCTREG_COUNT(st_obj);
 
 static_assert(st_cnt == 2);
-static_assert(std::is_same_v<std::remove_reference_t<decltype(st_obj.structreg_get<16>())>, int>);
-static_assert(std::is_same_v<std::remove_reference_t<decltype(st_obj.structreg_get<17>())>, int>);
+static_assert(std::is_same_v<std::remove_reference_t<decltype(st_obj.structreg_get<0>())>, int>);
+static_assert(std::is_same_v<std::remove_reference_t<decltype(st_obj.structreg_get<1>())>, int>);
 
 // --- structreg_get_tag_index tests (struct) ---
 static_assert(structreg_get_tag_index<pile, pile.st0>() == 0);
@@ -178,35 +178,35 @@ int main() {
 
 
   static_assert(std::is_same_v<
-    std::remove_reference_t<decltype(multi.structreg_get<3>())>, int>);
+    std::remove_reference_t<decltype(multi.structreg_get<0>())>, int>);
   static_assert(std::is_same_v<
-    std::remove_reference_t<decltype(multi.structreg_get<4>())>, float>);
+    std::remove_reference_t<decltype(multi.structreg_get<1>())>, float>);
   static_assert(std::is_same_v<
-    std::remove_reference_t<decltype(multi.structreg_get<6>())>, double>);
+    std::remove_reference_t<decltype(multi.structreg_get<3>())>, double>);
   static_assert(std::is_same_v<
-    std::remove_reference_t<decltype(multi.structreg_get<5>())>, char>);
+    std::remove_reference_t<decltype(multi.structreg_get<2>())>, char>);
   static_assert(std::is_same_v<
-    std::remove_reference_t<decltype(multi.structreg_get<6>())>, double>);
+    std::remove_reference_t<decltype(multi.structreg_get<3>())>, double>);
 
-  multi.structreg_get<3>() = 42;
-  multi.structreg_get<4>() = 3.14f;
-  multi.structreg_get<5>() = 'Q';
+  multi.structreg_get<0>() = 42;
+  multi.structreg_get<1>() = 3.14f;
+  multi.structreg_get<2>() = 'Q';
 
   assert(multi.x == 42);
   assert(multi.y == 3.14f);
   assert(multi.z == 'Q');
 
-  multi.structreg_get<6>() = 2.718;
+  multi.structreg_get<3>() = 2.718;
   assert(multi.w == 2.718);
 
-  multi.structreg_get<6>() = 1.618;
+  multi.structreg_get<3>() = 1.618;
   assert(multi.w == 1.618);
 
-  static_assert(std::is_same_v<decltype(multi.structreg_get<3>()), int&>);
-  static_assert(std::is_same_v<decltype(multi.structreg_get<4>()), float&>);
-  static_assert(std::is_same_v<decltype(multi.structreg_get<6>()), double&>);
-  static_assert(std::is_same_v<decltype(multi.structreg_get<5>()), char&>);
-  static_assert(std::is_same_v<decltype(multi.structreg_get<6>()), double&>);
+  static_assert(std::is_same_v<decltype(multi.structreg_get<0>()), int&>);
+  static_assert(std::is_same_v<decltype(multi.structreg_get<1>()), float&>);
+  static_assert(std::is_same_v<decltype(multi.structreg_get<3>()), double&>);
+  static_assert(std::is_same_v<decltype(multi.structreg_get<2>()), char&>);
+  static_assert(std::is_same_v<decltype(multi.structreg_get<3>()), double&>);
 
   std::printf("multi.x=%d, multi.y=%.2f, multi.w=%.3f, multi.z=%c\n",
     multi.x, double(multi.y), multi.w, multi.z);
@@ -264,8 +264,8 @@ int main() {
   assert(same_b == 200);
 
   // --- same-type runtime tests (struct, uids 16,17) ---
-  st_obj.structreg_get<16>() = 10;
-  st_obj.structreg_get<17>() = 20;
+  st_obj.structreg_get<0>() = 10;
+  st_obj.structreg_get<1>() = 20;
   assert(st_obj.st_a == 10);
   assert(st_obj.st_b == 20);
 
