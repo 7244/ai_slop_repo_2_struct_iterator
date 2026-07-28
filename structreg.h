@@ -8,6 +8,12 @@
 #endif
 
 namespace _structreg_ {
+  template <typename T, T... Is>
+  struct integer_sequence {};
+
+  template <uintptr_t N>
+  using _make_index_sequence = __make_integer_seq<integer_sequence, uintptr_t, N>;
+
   template <typename Tag, auto>
   struct nth {
     friend consteval auto get_type(nth);
@@ -91,9 +97,9 @@ namespace _structreg_ {
   template <typename StructT, uintptr_t Start, uintptr_t End>
   consteval uintptr_t _count_range() {
     if constexpr (Start >= End) return 0;
-    else return []<uintptr_t... Is>(std::index_sequence<Is...>) {
+    else return []<uintptr_t... Is>(integer_sequence<uintptr_t, Is...>) {
       return (requires { StructT{}.template structreg_get<Start + Is>(); } + ...);
-    }(std::make_index_sequence<End - Start>{});
+    }(_make_index_sequence<End - Start>{});
   }
 }
 
@@ -144,11 +150,11 @@ consteval uintptr_t structreg_get_tag_index() {
 template <auto& S, auto& F, typename Tag = _structreg_::default_tag>
 consteval uintptr_t structreg_get_tag_index() {
   using T = std::remove_reference_t<decltype(S)>;
-  constexpr auto uid = []<uintptr_t... Is>(std::index_sequence<Is...>) {
+  constexpr auto uid = []<uintptr_t... Is>(_structreg_::integer_sequence<uintptr_t, Is...>) {
     uintptr_t f = ~uintptr_t{};
     ((_structreg_::field_addr_match<Is>(S, F) ? (f = Is) || true : false) || ...);
     return f;
-  }(std::make_index_sequence<1024>{});
+  }(_structreg_::_make_index_sequence<1024>{});
   static_assert(uid != ~uintptr_t{}, "structreg_get_tag_index: field not found in struct");
   using UidType = decltype(get_type(_structreg_::nth<T, uid>{}));
   constexpr auto r = _structreg_::try_lookup_type<Tag, UidType>();
