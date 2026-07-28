@@ -62,6 +62,10 @@ static_assert(_structreg_::default_tag::count() == 7);
 static_assert(mv_tag_a::count() == 3);
 static_assert(mv_tag_b::count() == 2);
 
+static_assert(structreg_convert_tag_index<mv_tag_a, 2, mv_tag_b> == 1);
+static_assert(structreg_convert_tag_index<mv_tag_b, 1, mv_tag_a> == 2);
+
+
 static_assert(std::is_same_v<std::remove_reference_t<decltype(structreg_get<0, mv_tag_a>())>, int>);
 static_assert(std::is_same_v<std::remove_reference_t<decltype(structreg_get<1, mv_tag_a>())>, float>);
 static_assert(std::is_same_v<std::remove_reference_t<decltype(structreg_get<2, mv_tag_a>())>, double>);
@@ -145,6 +149,9 @@ int main() {
   static_assert(multi_cnt == 4);
   static_assert(tag_a::count() == 3);
   static_assert(tag_b::count() == 2);
+  static_assert(structreg_convert_tag_index<tag_a, 2, tag_b> == 1);
+  static_assert(structreg_convert_tag_index<tag_b, 1, tag_a> == 2);
+
 
   static_assert(std::is_same_v<
     std::remove_reference_t<decltype(multi.structreg_get<3>())>, int>);
@@ -216,6 +223,15 @@ int main() {
 
   structreg_get<1, mv_tag_b>() = 1.618;
   assert(mv_w == 1.618);
+
+  // --- cross-tag access via convert_tag_index ---
+  constexpr auto mv_w_in_b = structreg_convert_tag_index<mv_tag_a, 2, mv_tag_b>;
+  structreg_get<mv_w_in_b, mv_tag_b>() = 3.14;
+  assert(mv_w == 3.14);
+
+  constexpr auto mv_w_in_a = structreg_convert_tag_index<mv_tag_b, 1, mv_tag_a>;
+  structreg_get<mv_w_in_a, mv_tag_a>() = 2.71;
+  assert(mv_w == 2.71);
 
   // --- same-type runtime tests (standalone) ---
   structreg_get<7>() = 100;

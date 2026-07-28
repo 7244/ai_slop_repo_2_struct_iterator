@@ -59,6 +59,12 @@ namespace _structreg_ {
 
   using default_tag = tag<[]{ }>;
 
+  template <class FromTag, uintptr_t FromIndex, class ToTag>
+  consteval uintptr_t convert_tag_index() {
+    using T = decltype(get_type(nth<FromTag, FromIndex>{}));
+    return reg_type<ToTag, T>();
+  }
+
   template <typename StructT, uintptr_t I>
   consteval bool _uid_exists() {
       if constexpr (requires { StructT{}.template structreg_get<I>(); }) {
@@ -111,6 +117,10 @@ namespace _structreg_ {
 
 #define STRUCTREG_COUNT(obj) \
   _structreg_::count_all<decltype(obj)>()
+
+template <class FromTag, uintptr_t FromIndex, class ToTag>
+inline constexpr uintptr_t structreg_convert_tag_index =
+  _structreg_::convert_tag_index<FromTag, FromIndex, ToTag>();
 
 #if defined(__GNUC__) && !defined(__clang__)
   #pragma GCC diagnostic pop
