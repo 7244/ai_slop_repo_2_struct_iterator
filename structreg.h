@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstddef>
-
 #if defined(__GNUC__) && !defined(__clang__)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wnon-template-friend"
