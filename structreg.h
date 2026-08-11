@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 #if defined(__GNUC__) && !defined(__clang__)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wnon-template-friend"
@@ -66,6 +68,59 @@ namespace _structreg_ {
   };
 
   using default_tag = tag<[]{ }>;
+  using include_guard_tag = tag<[]{ }>;
+
+  inline constexpr std::size_t path_capacity = 1024;
+
+  // Normalization is defensive: clang records the first spelling of a file per
+  // TU, so __FILE__ is already spelling-deduped there. It matters on compilers
+  // that keep include spellings as-written.
+  template <std::size_t Max>
+  struct path_value {
+    char data[Max]{};
+    template <std::size_t N>
+    consteval path_value(const char (&s)[N]) {
+      static_assert(N <= Max, "path_value: path exceeds capacity");
+      std::size_t seg_end[Max] = {};
+      bool normal[Max] = {};
+      std::size_t depth = 0;
+      const bool absolute = s[0] == '/';
+      std::size_t out = absolute ? 1 : 0;
+      if (absolute) { data[0] = '/'; }
+      std::size_t i = out;
+      while (s[i]) {
+        if (s[i] == '/') { ++i; continue; }
+        const std::size_t start = i;
+        while (s[i] && s[i] != '/') { ++i; }
+        const std::size_t len = i - start;
+        if (len == 1 && s[start] == '.') { continue; }
+        if (len == 2 && s[start] == '.' && s[start + 1] == '.') {
+          if (depth > 0 && normal[depth - 1]) {
+            const std::size_t new_out = seg_end[--depth];
+            for (std::size_t j = new_out; j < out; ++j) { data[j] = '\0'; }
+            out = new_out;
+          } else if (!absolute) {
+            seg_end[depth] = out;
+            normal[depth++] = false;
+            if (out > 0) { data[out++] = '/'; }
+            data[out++] = '.';
+            data[out++] = '.';
+          }
+          continue;
+        }
+        seg_end[depth] = out;
+        normal[depth++] = true;
+        if (out > (absolute ? 1u : 0u)) { data[out++] = '/'; }
+        for (std::size_t j = 0; j < len; ++j) { data[out + j] = s[start + j]; }
+        out += len;
+      }
+      data[out] = '\0';
+    }
+    friend consteval bool operator==(const path_value&, const path_value&) = default;
+  };
+
+  template <path_value<path_capacity> P>
+  struct path_id {};
 
   template <class FromTag, uintptr_t FromIndex, class ToTag>
   consteval uintptr_t convert_tag_index() {
@@ -73,6 +128,13 @@ namespace _structreg_ {
     return reg_type<ToTag, T>();
   }
 
+  // clang quirk: evaluating try_lookup_type/reg_type at an index whose type_slot
+  // is not yet defined (requires probe fails, friend return type undeduced)
+  // poisons later scans of that index for try_lookup_type — the slot reports as
+  // unregistered forever. type_count (requires-only) and reg_type
+  // (scan-then-define) are immune. Never use try_lookup_type to check a
+  // registration before reg_type defines it (pre-registration duplicate
+  // checks); use the count-before/count-after pattern (STRICT_INCLUDE_GUARD).
   template <class Tag, class T, uintptr_t N = 0>
   consteval uintptr_t try_lookup_type() {
     if constexpr (requires { get_type(nth<Tag, N>{}); })
@@ -133,6 +195,17 @@ namespace _structreg_ {
 
 #define STRUCTREG_COUNT(obj) \
   _structreg_::_count_range<std::remove_reference_t<decltype(obj)>, 0, 1024>()
+
+#ifndef STRICT_INCLUDE_GUARD
+  #define STRICT_INCLUDE_GUARD static_assert([]{ \
+      using id = _structreg_::path_id<_structreg_::path_value<_structreg_::path_capacity>(__FILE__)>; \
+      constexpr auto before = _structreg_::type_count<_structreg_::include_guard_tag>(); \
+      constexpr auto idx = _structreg_::reg_type<_structreg_::include_guard_tag, id>(); \
+      (void)idx; \
+      constexpr auto after = _structreg_::type_count<_structreg_::include_guard_tag>(); \
+      return after == before + 1; \
+    }(), "duplicate include: " __FILE__);
+#endif
 
 template <class FromTag, uintptr_t FromIndex, class ToTag>
 inline constexpr uintptr_t structreg_convert_tag_index =
