@@ -68,34 +68,34 @@ namespace _structreg_ {
   using default_tag = tag<[]{ }>;
   using include_guard_tag = tag<[]{ }>;
 
-  inline constexpr std::size_t path_capacity = 1024;
+  inline constexpr uintptr_t path_capacity = 1024;
 
   // Normalization is defensive: clang records the first spelling of a file per
   // TU, so __FILE__ is already spelling-deduped there. It matters on compilers
   // that keep include spellings as-written.
-  template <std::size_t Max>
+  template <uintptr_t Max>
   struct path_value {
     char data[Max]{};
-    template <std::size_t N>
+    template <uintptr_t N>
     consteval path_value(const char (&s)[N]) {
       static_assert(N <= Max, "path_value: path exceeds capacity");
-      std::size_t seg_end[Max] = {};
+      uintptr_t seg_end[Max] = {};
       bool normal[Max] = {};
-      std::size_t depth = 0;
+      uintptr_t depth = 0;
       const bool absolute = s[0] == '/';
-      std::size_t out = absolute ? 1 : 0;
+      uintptr_t out = absolute ? 1 : 0;
       if (absolute) { data[0] = '/'; }
-      std::size_t i = out;
+      uintptr_t i = out;
       while (s[i]) {
         if (s[i] == '/') { ++i; continue; }
-        const std::size_t start = i;
+        const uintptr_t start = i;
         while (s[i] && s[i] != '/') { ++i; }
-        const std::size_t len = i - start;
+        const uintptr_t len = i - start;
         if (len == 1 && s[start] == '.') { continue; }
         if (len == 2 && s[start] == '.' && s[start + 1] == '.') {
           if (depth > 0 && normal[depth - 1]) {
-            const std::size_t new_out = seg_end[--depth];
-            for (std::size_t j = new_out; j < out; ++j) { data[j] = '\0'; }
+            const uintptr_t new_out = seg_end[--depth];
+            for (uintptr_t j = new_out; j < out; ++j) { data[j] = '\0'; }
             out = new_out;
           } else if (!absolute) {
             seg_end[depth] = out;
@@ -109,7 +109,7 @@ namespace _structreg_ {
         seg_end[depth] = out;
         normal[depth++] = true;
         if (out > (absolute ? 1u : 0u)) { data[out++] = '/'; }
-        for (std::size_t j = 0; j < len; ++j) { data[out + j] = s[start + j]; }
+        for (uintptr_t j = 0; j < len; ++j) { data[out + j] = s[start + j]; }
         out += len;
       }
       data[out] = '\0';
