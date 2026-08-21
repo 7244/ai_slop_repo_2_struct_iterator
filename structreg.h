@@ -154,6 +154,83 @@ namespace _structreg_ {
     return false;
   }
 
+  static constexpr uint64_t hash_mix(uint64_t h, uint64_t v) noexcept {
+    return h ^ (v + 0x9e3779b97f4a7c15 + (h << 6) + (h >> 2));
+  }
+
+  template <class T>
+  consteval uint64_t type_name_hash() {
+    uint64_t h = 0x5f4c91f4c2a9;
+    const char* p = __PRETTY_FUNCTION__;
+
+    while (!(p[0] == 'T' && p[1] == ' ' && p[2] == '=' && p[3] == ' ')) {
+      ++p;
+    }
+
+    for (p += 4; *p; ++p) {
+      if (p[0] == ' ' && p[1] == 'a' && p[2] == 't' && p[3] == ' ') {
+        while (*p && *p != ')') {
+          ++p;
+        }
+        continue;
+      }
+      h = hash_mix(h, (uint64_t)(uint8_t)*p);
+    }
+
+    return h;
+  }
+
+#if defined(__clang__)
+  #pragma clang diagnostic push
+  #pragma clang diagnostic ignored "-Wc++26-extensions"
+#endif
+
+  template <class T>
+  consteval uint64_t type_hash() {
+    using unref = std::remove_reference_t<T>;
+    static_assert(!__is_volatile(unref), "volatile types are not supported");
+    using t = std::remove_cv_t<unref>;
+
+    if constexpr (__is_array(t)) {
+      using element = std::remove_reference_t<
+        decltype((*static_cast<t*>(nullptr))[0])
+      >;
+
+      auto h = hash_mix(0xa1, type_name_hash<element>());
+      h = hash_mix(h, type_hash<element>());
+      return hash_mix(h, sizeof(t) / sizeof(element));
+    }
+    else if constexpr (__is_aggregate(t) && __is_class(t)) {
+      auto h = type_name_hash<t>();
+      h = hash_mix(h, sizeof(t));
+      h = hash_mix(h, __alignof__(t));
+
+      t value{};
+      auto&& [...members] = value;
+
+      ([&]<class M>(M&&) {
+        h = hash_mix(h, type_hash<M>());
+      }(members), ...);
+
+      return hash_mix(h, sizeof...(members));
+    }
+    else {
+      auto h = type_name_hash<t>();
+      h = hash_mix(h, sizeof(t));
+      h = hash_mix(h, __alignof__(t));
+      h = hash_mix(h, (uint64_t)__is_integral(t) ? 0x11 : 0);
+      h = hash_mix(h, (uint64_t)__is_floating_point(t) ? 0x22 : 0);
+      h = hash_mix(h, (uint64_t)__is_signed(t) ? 0x44 : 0);
+      h = hash_mix(h, (uint64_t)__is_pointer(t) ? 0x88 : 0);
+      h = hash_mix(h, (uint64_t)__is_enum(t) ? 0xcc : 0);
+      return h;
+    }
+  }
+
+#if defined(__clang__)
+  #pragma clang diagnostic pop
+#endif
+
   template <typename StructT, uintptr_t Start, uintptr_t End>
   consteval uintptr_t _count_range() {
     if constexpr (Start >= End) return 0;
